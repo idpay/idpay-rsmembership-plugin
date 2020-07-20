@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension version="3.0" type="plugin" group="system" method="upgrade">
+    <name>PLG_RSM_IDPAY_NAME</name>
+    <description>PLG_RSM_IDPAY_DESC</description>
+    <creationDate>July 2020</creationDate>
+    <copyright>IDPay.com</copyright>
+    <author>Developer: meysamrazmi, vispa, Publisher: IDPay</author>
+    <authorUrl>http://idpay.ir</authorUrl>
+    <authorEmail>info@idpay.ir</authorEmail>
+    <version>1.0</version>
+    <license>http://www.gnu.org/licenses/gpl-2.0.html GPLv2 or later</license>
+    <files>
+        <filename plugin="rsmembershipidpay">rsmembershipidpay.php</filename>
+        <filename>index.html</filename>
+        <folder>rsmembership_idpay</folder>
+    </files>
+    <languages folder="language/fa-IR">
+        <language tag="fa-IR">fa-IR.plg_system_rsmembershipidpay.ini</language>
+        <language tag="fa-IR">fa-IR.plg_system_rsmembershipidpay.sys.ini</language>
+    </languages>
+    <languages folder="language/en-GB">
+        <language tag="en-GB">en-GB.plg_system_rsmembershipidpay.ini</language>
+        <language tag="en-GB">en-GB.plg_system_rsmembershipidpay.sys.ini</language>
+    </languages>
+    <config>
+        <fields name="params">
+            <fieldset name="basic">
+                <field name="api_key" type="text" size="60" label="API KEY" description="PLG_RSM_IDPAY_API_KEY_DESC"/>
+                <field name="sandbox" type="radio" default="yes" label="PLG_RSM_IDPAY_SANDBOX_LABEL" class="btn-group" description="PLG_RSM_IDPAY_SANDBOX_DESC">
+                    <option value="yes">PLG_RSM_IDPAY_YES</option>
+                    <option value="no">PLG_RSM_IDPAY_NO</option>
+                </field>
+                <field name="currency" type="radio" default="rial" label="PLG_RSM_IDPAY_CURRENCY_LABEL" class="btn-group" description="PLG_RSM_IDPAY_CURRENCY_DESC">
+                    <option value="rial">PLG_RSM_IDPAY_CURRENCY_RIAL</option>
+                    <option value="toman">PLG_RSM_IDPAY_CURRENCY_TOMAN</option>
+                </field>
+                <field name="success_massage" type="textarea" rows="4" label="PLG_RSM_IDPAY_SUCCESS_MESSAGE_LABEL"
+                       description="PLG_RSM_IDPAY_HELP_MESSAGE"
+                       default="پرداخت شما با موفقیت انجام شد. کد رهگیری: {track_id}"/>
+                <field name="failed_massage" type="textarea" rows="4" label="PLG_RSM_IDPAY_ERROR_MESSAGE_LABEL"
+                       description="PLG_RSM_IDPAY_HELP_MESSAGE"
+                       default="پرداخت شما ناموفق بوده است. لطفا مجددا تلاش نمایید یا در صورت بروز اشکال با مدیر سایت تماس بگیرید."/>
+                <field name="help" type="spacer" label="PLG_RSM_IDPAY_HELP_MESSAGE"/>
+            </fieldset>
+        </fields>
+    </config>
+</extension>

@@ -238,8 +238,10 @@ class plgSystemRSMembershipIDPay extends JPlugin
             throw new Exception($msg);
 
         } catch (Exception $e) {
-            RSMembership::deny($transaction->id);
-            RSMembership::saveTransactionLog($e->getMessage(), $transaction->id );
+            if($transaction){
+                RSMembership::deny($transaction->id);
+                RSMembership::saveTransactionLog($e->getMessage(), $transaction->id );
+            }
             $app->enqueueMessage($e->getMessage(), 'error');
         }
     }

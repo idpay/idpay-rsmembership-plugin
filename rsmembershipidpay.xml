@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <extension version="3.0" type="plugin" group="system" method="upgrade">
-    <name>PLG_RSM_IDPAY_NAME</name>
-    <description>PLG_RSM_IDPAY_DESC</description>
+    <name>IDPay RSMembership</name>
+    <description>IDPay payment gateway for RSMembership</description>
     <creationDate>July 2020</creationDate>
     <copyright>IDPay.com</copyright>
     <author>Developer: meysamrazmi, vispa, Publisher: IDPay</author>
@@ -13,7 +13,6 @@
     <files>
         <filename plugin="rsmembershipidpay">rsmembershipidpay.php</filename>
         <filename>index.html</filename>
-        <folder>rsmembership_idpay</folder>
     </files>
 
     <languages folder="language/fa-IR">

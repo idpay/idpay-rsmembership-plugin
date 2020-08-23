@@ -5,7 +5,7 @@
  * @license       GPL, http://www.gnu.org/licenses/gpl-2.0.html
  */
 /**
- * @plugin RSMembership IDPay Payment
+ * @plugin IDPay for RSMembership
  * @author Meysam Razmi(meysamrazmi), vispa
  */
 

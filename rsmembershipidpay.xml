@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <extension version="3.0" type="plugin" group="system" method="upgrade">
-    <name>IDPay RSMembership</name>
-    <description>IDPay payment gateway for RSMembership</description>
-    <creationDate>July 2020</creationDate>
+    <name>PLG_RSM_IDPAY_NAME</name>
+    <description>PLG_RSM_IDPAY_DESC</description>
+    <creationDate>August 2020</creationDate>
     <copyright>IDPay.com</copyright>
     <author>Developer: meysamrazmi, vispa, Publisher: IDPay</author>
-    <authorUrl>http://idpay.ir</authorUrl>
+    <authorUrl>https://idpay.ir</authorUrl>
     <authorEmail>info@idpay.ir</authorEmail>
     <version>1.0.0</version>
     <license>http://www.gnu.org/licenses/gpl-2.0.html GPLv2 or later</license>

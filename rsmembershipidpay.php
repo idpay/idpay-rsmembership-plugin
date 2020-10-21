@@ -5,7 +5,7 @@
  * @license       GPL, http://www.gnu.org/licenses/gpl-2.0.html
  */
 /**
- * @plugin IDPay for RSMembership
+ * @plugin RSMembership IDPay Payment
  * @author Meysam Razmi(meysamrazmi), vispa
  */
 
@@ -135,15 +135,13 @@ class plgSystemRSMembershipIDPay extends JPlugin
      */
     protected function onPaymentNotification($app)
     {
-        $input    = $app->input;
         $jinput   = $app->input;
-        $status   = empty( $jinput->post->get( 'status' ) ) ? NULL : $jinput->post->get( 'status' );
-        $track_id = empty( $jinput->post->get( 'track_id' ) ) ? NULL : $jinput->post->get( 'track_id' );
-        $id       = empty( $jinput->post->get( 'id' ) ) ? NULL : $jinput->post->get( 'id' );
-        $order_id = empty( $jinput->post->get( 'order_id' ) ) ? NULL : $jinput->post->get( 'order_id' );
+        $status   = !empty( $jinput->post->get( 'status' ) )   ? $jinput->post->get( 'status' )   : ( !empty( $jinput->get->get( 'status' ) )   ? $jinput->get->get( 'status' )   : NULL );
+        $track_id = !empty( $jinput->post->get( 'track_id' ) ) ? $jinput->post->get( 'track_id' ) : ( !empty( $jinput->get->get( 'track_id' ) ) ? $jinput->get->get( 'track_id' ) : NULL );
+        $id       = !empty( $jinput->post->get( 'id' ) )       ? $jinput->post->get( 'id' )       : ( !empty( $jinput->get->get( 'id' ) )       ? $jinput->get->get( 'id' )       : NULL );
+        $order_id = !empty( $jinput->post->get( 'order_id' ) ) ? $jinput->post->get( 'order_id' ) : ( !empty( $jinput->get->get( 'order_id' ) ) ? $jinput->get->get( 'order_id' ) : NULL );
 
         $session  = JFactory::getSession();
-
         $transaction_custom = $session->get('transaction_custom');
 
         $db = JFactory::getDbo();

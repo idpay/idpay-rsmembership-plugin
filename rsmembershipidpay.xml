@@ -2,7 +2,7 @@
 <extension version="3.0" type="plugin" group="system" method="upgrade">
     <name>PLG_RSM_IDPAY_NAME</name>
     <description>PLG_RSM_IDPAY_DESC</description>
-    <creationDate>October 2020</creationDate>
+    <creationDate>July 2020</creationDate>
     <copyright>IDPay.com</copyright>
     <author>Developer: meysamrazmi, vispa, Publisher: IDPay</author>
     <authorUrl>https://idpay.ir</authorUrl>

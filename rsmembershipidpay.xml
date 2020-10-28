@@ -7,7 +7,7 @@
     <author>Developer: meysamrazmi, vispa, Publisher: IDPay</author>
     <authorUrl>https://idpay.ir</authorUrl>
     <authorEmail>info@idpay.ir</authorEmail>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <license>http://www.gnu.org/licenses/gpl-2.0.html GPLv2 or later</license>
 
     <files>
@@ -25,7 +25,7 @@
     </languages>
 
     <updateservers>
-        <server type="extension" priority="1" name="System - IDPay for RSMembership">https://static.idpay.ir/plugins/joomla/rsmembership-idpay-udpate.xml</server>
+        <server type="extension" priority="1" name="System - IDPay for RSMembership">https://static.idpay.ir/plugins/joomla/rsmembership-idpay-update.xml</server>
     </updateservers>
 
     <config>

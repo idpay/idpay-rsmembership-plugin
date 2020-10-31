@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <extension version="3.0" type="plugin" group="system" method="upgrade">
-    <name>IDPay RSMembership</name>
+    <name>IDPay for RSMembership</name>
     <description>IDPay payment gateway for RSMembership</description>
     <creationDate>August 2020</creationDate>
     <copyright>IDPay.com</copyright>

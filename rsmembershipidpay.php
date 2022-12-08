@@ -1,40 +1,18 @@
 <?php
-/**
- * @package       RSMembership!
- * @copyright (C) 2009-2020 www.rsjoomla.com
- * @license       GPL, http://www.gnu.org/licenses/gpl-2.0.html
- */
-/**
- * @plugin RSMembership IDPay Payment
- * @author Meysam Razmi(meysamrazmi), vispa
- */
 
 ini_set('display_errors', 1);
 defined('_JEXEC') or die('Restricted access');
-require_once JPATH_ADMINISTRATOR . '/components/com_rsmembership/helpers/rsmembership.php';
 
 class plgSystemRSMembershipIDPay extends JPlugin
 {
     public function __construct(&$subject, $config)
     {
         parent::__construct($subject, $config);
-        // load languages
         $this->loadLanguage('plg_system_rsmembership', JPATH_ADMINISTRATOR);
         $this->loadLanguage('plg_system_rsmembershipidpay', JPATH_ADMINISTRATOR);
-
         RSMembership::addPlugin( $this->translate('OPTION_NAME'), 'rsmembershipidpay');
     }
 
-    /**
-     * call when payment starts
-     *
-     * @param $plugin
-     * @param $data
-     * @param $extra
-     * @param $membership
-     * @param $transaction
-     * @param $html
-     */
     public function onMembershipPayment($plugin, $data, $extra, $membership, $transaction, $html)
     {
         $app = JFactory::getApplication();
@@ -58,6 +36,12 @@ class plgSystemRSMembershipIDPay extends JPlugin
             if ($membership->activation == 2) {
                 $transaction->status = 'completed';
             }
+            $transaction->tax_type = '0';
+            $transaction->tax_value = '0';
+            $transaction->tax_percent_value = '0';
+            $transaction->hash = '';
+            $transaction->response_log = '';
+
             $transaction->store();
 
             $callback = JURI::base() . 'index.php?option=com_rsmembership&idpayPayment=1';
@@ -117,10 +101,6 @@ class plgSystemRSMembershipIDPay extends JPlugin
         return $msg;
     }
 
-    /**
-     * after payment completed
-     * calls function onPaymentNotification()
-     */
     public function onAfterDispatch()
     {
         $app = JFactory::getApplication();
@@ -129,10 +109,6 @@ class plgSystemRSMembershipIDPay extends JPlugin
         }
     }
 
-    /**
-     * process payment verification and approve subscription
-     * @param $app
-     */
     protected function onPaymentNotification($app)
     {
         $jinput   = $app->input;
@@ -244,15 +220,6 @@ class plgSystemRSMembershipIDPay extends JPlugin
         }
     }
 
-    /**
-     * fill message in gateway setting with track_id and order_id
-     *
-     * @param $track_id
-     * @param $order_id
-     * @param $type | success or error
-     *
-     * @return String
-     */
     public function idpay_get_filled_message( $track_id, $order_id, $type ) {
         return str_replace( [ "{track_id}", "{order_id}" ], [
             $track_id,
@@ -260,11 +227,6 @@ class plgSystemRSMembershipIDPay extends JPlugin
         ], $this->params->get( $type, '' ) );
     }
 
-    /**
-     * translate plugin language files
-     * @param $key
-     * @return mixed
-     */
     protected function translate($key)
     {
         return JText::_('PLG_RSM_IDPAY_' . strtoupper($key));

@@ -3,8 +3,17 @@
 ini_set('display_errors', 1);
 defined('_JEXEC') or die('Restricted access');
 
+use RSMembership;
+
 class plgSystemRSMembershipIDPay extends JPlugin
 {
+    public const TRANSACTION_STATE_COMPLETE = 'completed';
+    public const TRANSACTION_STATE_DENIED = 'denied';
+    public const TRANSACTION_STATE_PENDING = 'pending';
+
+    public $application;
+
+
     public function __construct(&$subject, $config)
     {
         parent::__construct($subject, $config);
@@ -13,17 +22,16 @@ class plgSystemRSMembershipIDPay extends JPlugin
         RSMembership::addPlugin( $this->translate('OPTION_NAME'), 'rsmembershipidpay');
     }
 
-    public function onMembershipPayment($plugin, $data, $extra, $membership, $transaction, $html)
+
+    public function onMembershipPayment($plugin, $data, $extra,  $membership, $transaction, $html)
     {
-        $app = JFactory::getApplication();
+            /**  */
 
-        try {
-            if ($plugin != 'rsmembershipidpay')
-                return;
+            $app = JFactory::getApplication();
+            if ($plugin != 'rsmembershipidpay')  return;
 
-            $api_key = trim($this->params->get('api_key'));
+            $api_key = $this->params->get('api_key');
             $sandbox = $this->params->get('sandbox') == 'no' ? 'false' : 'true';
-
             $extra_total = 0;
             foreach ($extra as $row) {
                 $extra_total += $row->price;
@@ -32,117 +40,167 @@ class plgSystemRSMembershipIDPay extends JPlugin
             $amount = $transaction->price + $extra_total;
             $amount *= $this->params->get('currency') == 'rial' ? 1 : 10;
 
-            $transaction->custom = md5($transaction->params . ' ' . time());
-            if ($membership->activation == 2) {
-                $transaction->status = 'completed';
-            }
-            $transaction->tax_type = '0';
-            $transaction->tax_value = '0';
-            $transaction->tax_percent_value = '0';
-            $transaction->hash = '';
-            $transaction->response_log = '';
-
-            $transaction->store();
-
-            $callback = JURI::base() . 'index.php?option=com_rsmembership&idpayPayment=1';
-            $callback = JRoute::_($callback, false);
-            $session  = JFactory::getSession();
-            $session->set('transaction_custom', $transaction->custom);
-            $session->set('membership_id', $membership->id);
-
-            $data = [
-                'order_id' => $transaction->id,
-                'amount'   => $amount,
-                'name'     => !empty($data->name)? $data->name : '',
-                'phone'    => !empty($data->fields['phone'])? $data->fields['phone'] : '',
-                'mail'     => !empty($data->email)? $data->email : '',
-                'desc'     => htmlentities( $this->translate('PARAMS_DESC') . $transaction->id, ENT_COMPAT, 'utf-8'),
-                'callback' => $callback,
-            ];
-
-            $ch = curl_init( 'https://api.idpay.ir/v1.1/payment' );
-            curl_setopt( $ch, CURLOPT_POSTFIELDS, json_encode( $data ) );
-            curl_setopt( $ch, CURLOPT_RETURNTRANSFER, TRUE );
-            curl_setopt( $ch, CURLOPT_HTTPHEADER, [
-                'Content-Type: application/json',
-                'X-API-KEY:' . $api_key,
-                'X-SANDBOX:' . $sandbox,
-            ] );
-
-            $result      = curl_exec( $ch );
-            $result      = json_decode( $result );
-            $http_status = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
-            curl_close( $ch );
-
-            if ( $http_status != 201 || empty( $result ) || empty( $result->id ) || empty( $result->link ) )
+            if($transaction->get('status') == self::TRANSACTION_STATE_PENDING)
             {
-                $transaction->status = 'denied';
+                $transaction->tax_type = '0';
+                $transaction->tax_value = '0';
+                $transaction->tax_percent_value = '0';
+                $transaction->hash = '';
+                $transaction->custom = $membership->activation;
+                $transaction->response_log = '';
                 $transaction->store();
+            }
+            /* Activation (s) type =>
+             [
+                0 => Manual - activation will require a Joomla! administrator to review the membership request
+                1 => Automatic - will automatically activate the membership when the payment
+                2 => Instant - will activate the membership without waiting for payment
+            ]
+            */
 
-                $msg = sprintf( $this->translate('ERROR_PAYMENT'), $http_status, $result->error_code, $result->error_message );
-                RSMembership::saveTransactionLog($msg, $transaction->id);
+            switch ($membership->activation){
+                case 0:
+                case 1:
+                        $callback = JURI::base() . 'index.php?option=com_rsmembership&idpayPayment=1';
+                        $callback = JRoute::_($callback, false);
+                        $orderId = $transaction->id;
 
-                throw new Exception($msg);
+                        $data = [
+                            'order_id' => $orderId,
+                            'amount'   => $amount,
+                            'name'     => !empty($data->name)? $data->name : '',
+                            'phone'    => !empty($data->fields['phone'])? $data->fields['phone'] : '',
+                            'mail'     => !empty($data->email)? $data->email : '',
+                            'desc'     => htmlentities( $this->translate('PARAMS_DESC') . $orderId, ENT_COMPAT, 'utf-8'),
+                            'callback' => $callback,
+                        ];
+
+                        $ch = curl_init( 'https://api.idpay.ir/v1.1/payment' );
+                        curl_setopt( $ch, CURLOPT_POSTFIELDS, json_encode( $data ) );
+                        curl_setopt( $ch, CURLOPT_RETURNTRANSFER, TRUE );
+                        curl_setopt( $ch, CURLOPT_HTTPHEADER, [
+                            'Content-Type: application/json',
+                            'X-API-KEY:' . $api_key,
+                            'X-SANDBOX:' . $sandbox,
+                        ] );
+
+                        $result      = curl_exec( $ch );
+                        $result      = json_decode( $result );
+                        $http_status = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+                        curl_close( $ch );
+
+                        if ( $http_status != 201 || empty( $result ) || empty( $result->id ) || empty( $result->link ) )
+                        {
+                            $transaction->status = self::TRANSACTION_STATE_DENIED;
+                            $transaction->store();
+
+                            $msg = sprintf( $this->translate('ERROR_PAYMENT'), $http_status, $result->error_code, $result->error_message );
+                            RSMembership::saveTransactionLog($msg, $orderId);
+                            $url = JRoute::_(JURI::base() . 'index.php?option=com_rsmembership&view=mymemberships', false);
+                            $app->redirect($url,200);
+                        }
+
+                        RSMembership::saveTransactionLog( $this->translate('LOG_GOTO_BANK'), $orderId );
+
+                        $hash = hash('sha256',($orderId . $result->id) ) ;
+
+                        $transaction->hash = $hash;
+                        $transaction->store();
+
+                        $session  = $app->getSession();
+                        $session->set('transaction_hash', $hash);
+
+                        $app->redirect($result->link);
+                break;
+
+                case 2:
+                    $orderId = $transaction->id;
+
+                    $transaction->custom = $membership->activation;
+                    $transaction->tax_type = '0';
+                    $transaction->tax_value = '0';
+                    $transaction->tax_percent_value = '0';
+                    $transaction->hash = hash('sha256',($orderId . time()) );
+                    $transaction->response_log = '';
+                    $transaction->status = self::TRANSACTION_STATE_COMPLETE;
+                    $transaction->store();
+                    $membership->store();
+
+                    RSMembership::finalize($orderId);
+                    RSMembership::approve($orderId,true);
+                    $msg = $this->idpay_get_filled_message( uniqid(), $orderId, 'success_massage' );
+                    RSMembership::saveTransactionLog($msg, $transaction->id);
+
+                    $url = JRoute::_(JURI::base() . 'index.php?option=com_rsmembership&view=mymemberships', false);
+                    $app->redirect($url,200);
+
+                break;
             }
 
-            RSMembership::saveTransactionLog( $this->translate('LOG_GOTO_BANK'), $transaction->id );
-            $app->redirect($result->link);
-
             exit;
-        }
-        catch (Exception $e) {
-            $app->redirect(JRoute::_(JURI::base() . 'index.php/component/rsmembership/view-membership-details/' . $membership->id, false), $e->getMessage(), 'error');
-            exit;
-        }
     }
 
-    public function getLimitations() {
-        $msg = $this->translate('LIMITAION');
-        return $msg;
+    public function getValue(string $name){
+        /** @var Joomla\CMS\Input\Input $request */
+        $request   = $this->application->input;
+        return $request->getMethod() == 'POST'   ? $request->post->get($name) : $request->get->get( $name );
     }
 
-    public function onAfterDispatch()
-    {
-        $app = JFactory::getApplication();
-        if ($app->input->getBoolean('idpayPayment')) {
-            $this->onPaymentNotification($app);
-        }
+    public function getOrder($db,$orderId){
+        $query = $db->getQuery(true);
+        $query->select('*')
+            ->from($db->quoteName('#__rsmembership_transactions'))
+            ->where($db->quoteName('id') . ' = ' . $db->quote($orderId));
+        $db->setQuery($query);
+        return $db->loadObject();
+    }
+
+    public function updateOrder($db,$transaction,$status,$trackId = null){
+        $query = $db->getQuery(true);
+        $query->clear();
+        $query->update($db->quoteName('#__rsmembership_transactions'))
+            ->set($db->quoteName('hash') . ' = ' . $db->quote($trackId ?? ''))
+            ->set($db->quoteName('status') . ' = ' . $db->quote($status))
+            ->where($db->quoteName('id') . ' = ' . $db->quote($transaction->id));
+
+        $db->setQuery($query);
+       return $db->execute();
+    }
+
+    public function isNotDoubleSpending($reference,$receivedHash){
+        return $reference->hash != $receivedHash;
     }
 
     protected function onPaymentNotification($app)
     {
-        $jinput   = $app->input;
-        $status   = !empty( $jinput->post->get( 'status' ) )   ? $jinput->post->get( 'status' )   : ( !empty( $jinput->get->get( 'status' ) )   ? $jinput->get->get( 'status' )   : NULL );
-        $track_id = !empty( $jinput->post->get( 'track_id' ) ) ? $jinput->post->get( 'track_id' ) : ( !empty( $jinput->get->get( 'track_id' ) ) ? $jinput->get->get( 'track_id' ) : NULL );
-        $id       = !empty( $jinput->post->get( 'id' ) )       ? $jinput->post->get( 'id' )       : ( !empty( $jinput->get->get( 'id' ) )       ? $jinput->get->get( 'id' )       : NULL );
-        $order_id = !empty( $jinput->post->get( 'order_id' ) ) ? $jinput->post->get( 'order_id' ) : ( !empty( $jinput->get->get( 'order_id' ) ) ? $jinput->get->get( 'order_id' ) : NULL );
+        $this->application = $app;
+        $session  = $app->getSession();
+        $db = JFactory::getContainer()->get('DatabaseDriver');
 
-        $session  = JFactory::getSession();
-        $transaction_custom = $session->get('transaction_custom');
+        $status   =  $this->getValue('status');
+        $track_id   =  $this->getValue('track_id');
+        $id   =  $this->getValue('id');
+        $order_id   =  $this->getValue('order_id');
+        $hash = $session->get('transaction_hash');
+        $transaction = $this->getOrder($db,$order_id);
+        $activationType = (int) $transaction->custom;
 
-        $db = JFactory::getDbo();
-        $query = $db->getQuery(true);
-        $query->select('*')
-            ->from($db->quoteName('#__rsmembership_transactions'))
-            ->where($db->quoteName('status') . ' != ' . $db->quote('completed'))
-            ->where($db->quoteName('custom') . ' = ' . $db->quote($transaction_custom));
-        $db->setQuery($query);
-        $transaction = @$db->loadObject();
+        $validation = [
+            $status,
+            $track_id,
+            $id,
+            $order_id,
+            $hash,
+            $transaction,
+            $activationType,
+        ];
+
+        if($this->isOnceEmpty($validation) || $status != 10  ||$transaction->status != self::TRANSACTION_STATE_PENDING || $this->isNotDoubleSpending($transaction,$hash))
+        {
+            throw new Exception( $this->translate('ERROR_EMPTY_PARAMS') );
+        }
 
         try {
-            if ( empty( $id ) || empty( $order_id ) )
-                throw new Exception( $this->translate('ERROR_EMPTY_PARAMS') );
-
-            if (!$transaction)
-                throw new Exception( $this->translate('ERROR_NOT_FOUND') );
-
-            // Check double spending.
-            if ( $transaction->id != $order_id )
-                throw new Exception( $this->translate('ERROR_WRONG_PARAMS') );
-
-            if ( $status != 10 )
-                throw new Exception( sprintf( $this->translate('ERROR_FAILED'), $this->translate('CODE_'. $status), $status, $track_id ) );
-
             $api_key = $this->params->get( 'api_key', '' );
             $sandbox = $this->params->get( 'sandbox', '' ) == 'no' ? 'false' : 'true';
 
@@ -177,46 +235,59 @@ class plgSystemRSMembershipIDPay extends JPlugin
             $status = $result->status;
 
             if ($status == 100) {
-                $query->clear();
-                $query->update($db->quoteName('#__rsmembership_transactions'))
-                    ->set($db->quoteName('hash') . ' = ' . $db->quote($verify_track_id))
-                    ->where($db->quoteName('id') . ' = ' . $db->quote($transaction->id));
 
-                $db->setQuery($query);
-                $db->execute();
+                $this->updateOrder($db,$transaction,self::TRANSACTION_STATE_COMPLETE,$verify_track_id);
+                RSMembership::finalize($transaction->id);
 
-                $membership_id = $session->get('membership_id');
-
-                if (!$membership_id)
-                    throw new Exception( $this->translate('ERROR_NOT_FOUND'));
-
-                $query->clear()
-                    ->select('activation')
-                    ->from($db->quoteName('#__rsmembership_memberships'))
-                    ->where($db->quoteName('id') . ' = ' . $db->quote((int)$membership_id));
-                $db->setQuery($query);
-                $activation = $db->loadResult();
-
-                if ($activation) // activation == 0 => activation is manual
+                if ($activationType != 0)
                 {
-                    RSMembership::approve($transaction->id);
+                    RSMembership::approve($transaction->id,true);
                 }
 
                 $msg = $this->idpay_get_filled_message( $verify_track_id, $verify_order_id, 'success_massage' );
                 RSMembership::saveTransactionLog($msg, $transaction->id);
 
-                $app->redirect(JRoute::_(JURI::base() . 'index.php?option=com_rsmembership&view=mymemberships', false), $msg, 'message');
+                $url = JRoute::_(JURI::base() . 'index.php?option=com_rsmembership&view=mymemberships', false);
+                $app->redirect($url);
+                die();
             }
-
-            $msg = $this->idpay_get_filled_message( $verify_track_id, $verify_order_id, 'failed_massage' );
-            throw new Exception($msg);
+            else{
+                $msg = $this->idpay_get_filled_message( $verify_track_id, $verify_order_id, 'failed_massage' );
+                throw new Exception($msg);
+            }
 
         } catch (Exception $e) {
             if($transaction){
+                $this->updateOrder($db,$transaction,self::TRANSACTION_STATE_COMPLETE);
                 RSMembership::deny($transaction->id);
                 RSMembership::saveTransactionLog($e->getMessage(), $transaction->id );
             }
             $app->enqueueMessage($e->getMessage(), 'error');
+            $url = JRoute::_(JURI::base() . 'index.php?option=com_rsmembership&view=mymemberships', false);
+            $app->redirect($url);
+        }
+    }
+
+    public  function isOnceEmpty( array $variables ): bool {
+        foreach ( $variables as $variable ) {
+            if ( empty( $variable ) ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function getLimitations() {
+        $msg = $this->translate('LIMITAION');
+        return $msg;
+    }
+
+    public function onAfterDispatch()
+    {
+        $app = JFactory::getApplication();
+        if ($app->input->getBoolean('idpayPayment')) {
+            $this->onPaymentNotification($app);
         }
     }
 
